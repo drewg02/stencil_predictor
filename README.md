@@ -10,7 +10,7 @@ The thickness is the thickness of the pattern and defaults to 1.
 The output file will be a numpy array saved as a .npy file in all cases.
 The output png file is optional and will be a visualization of the array saved as a .png file.
 
-**[center_generator.py](center_generator.py)**
+**[center_generator.py](generators/center_generator.py)**
 
 - Generates initial conditions with a pattern starting from the center of the array.
 
@@ -18,7 +18,7 @@ The output png file is optional and will be a visualization of the array saved a
 center_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [--thickness THICKNESS] [--output_png_file OUTPUT_PNG_FILE] <output_file>
 ```
 
-**[outline_generator.py](outline_generator.py)**
+**[outline_generator.py](generators/outline_generator.py)**
 
 - Generates initial conditions with an outline around the edges of the array.
 
@@ -26,7 +26,7 @@ center_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [
 outline_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [--thickness THICKNESS] [--output_png_file OUTPUT_PNG_FILE] <output_file>
 ```
 
-**[plus_generator.py](plus_generator.py)**
+**[plus_generator.py](generators/plus_generator.py)**
 
 - Generates initial conditions with a plus pattern in the center of the array.
 
@@ -34,7 +34,7 @@ outline_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] 
 plus_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [--thickness THICKNESS] [--output_png_file OUTPUT_PNG_FILE] <output_file>
 ```
 
-**[random_generator.py](random_generator.py)**
+**[random_generator.py](generators/random_generator.py)**
 
 - Generates initial conditions with random values turned on.
 
@@ -42,7 +42,7 @@ plus_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [--
 random_generator.py [-h] <rows> <cols> <output_file>
 ```
 
-**[test_generator.py](test_generator.py)**
+**[test_generator.py](generators/test_generator.py)**
 
 - Generates initial conditions where the leftmost and rightmost columns are turned on and the rest are turned off.
 
