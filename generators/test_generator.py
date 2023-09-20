@@ -15,14 +15,16 @@ def main(args):
     parser.add_argument('rows', type=int, help='Number of rows for the array')
     parser.add_argument('cols', type=int, help='Number of columns for the array')
     parser.add_argument('output_file', type=str, help='Path to the output file')
+    parser.add_argument('output_mask_file', type=str, help='Path to the output mask file')
 
     parsed_args = parser.parse_args(args)
 
     # Apply the function to create the new array
-    new_array = ut.create_test_array(parsed_args.rows, parsed_args.cols)
+    array, mask = ut.create_test_array(parsed_args.rows, parsed_args.cols)
 
     # Save the output
-    ut.save_array_to_file(new_array, parsed_args.output_file)
+    ut.save_array_to_file(array, parsed_args.output_file)
+    ut.save_array_to_file(mask, parsed_args.output_mask_file)
 
 
 if __name__ == "__main__":

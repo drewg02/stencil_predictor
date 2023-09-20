@@ -14,16 +14,18 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import utilities as ut
 
-def update_pixel(new_x, new_y, array, mouse_button):
+def update_pixel(new_x, new_y, array, mask, mouse_button):
     # Only update the pixel if it is in bounds
     if 0 <= new_x < array.shape[1] and 0 <= new_y < array.shape[0]:
         # Update the pixel based on the mouse button, 1 is left click, 3 is right click
         if mouse_button == 1:
             array[new_y, new_x] = 1
+            mask[new_y, new_x] = 1
         elif mouse_button == 3:
             array[new_y, new_x] = 0
+            mask[new_y, new_x] = 0
 
-    return array
+    return array, mask
 
 def render(array, screen, width, height):
     # Create the plot to render
@@ -60,10 +62,11 @@ def render(array, screen, width, height):
     return x_offset, y_offset, new_width, new_height
 
 # Saves the outputs and exits the program
-def save_and_exit(array, parsed_args):
+def save_and_exit(array, mask, parsed_args):
     pygame.quit()
 
     ut.save_array_to_file(array, parsed_args.output_file)
+    ut.save_array_to_file(mask, parsed_args.output_mask_file)
     if parsed_args.output_png_file is not None:
         ut.save_array_as_image(array, parsed_args.output_png_file)
 
@@ -80,9 +83,11 @@ def calc_position(array, width, height, x_offset, y_offset):
 def main(args):
     parser = ut.ArgParser(description='Create a new array using a gui interface.')
     parser.add_argument('output_file', type=str, help='Path to the output file')
+    parser.add_argument('output_mask_file', type=str, help='Path to the output mask file')
     parser.add_argument('--rows', type=int, help='Number of rows for the array')
     parser.add_argument('--cols', type=int, help='Number of columns for the array')
     parser.add_argument('--input_file', type=str, help='File to start from')
+    parser.add_argument('--input_mask_file', type=str, help='File to start from')
     parser.add_argument('--output_png_file', type=str, help='Path to the output png file')
 
     parsed_args = parser.parse_args(args)
@@ -103,8 +108,10 @@ def main(args):
     # Handles the case where we are starting from an input file
     if parsed_args.input_file is not None:
         array = ut.read_array_from_file(parsed_args.input_file)
+        mask = ut.read_array_from_file(parsed_args.input_mask_file)
     else:
-        array = np.zeros((parsed_args.rows, parsed_args.cols), dtype=np.int32)
+        array = np.zeros((parsed_args.rows, parsed_args.cols), dtype=float)
+        mask = np.zeros((parsed_args.rows, parsed_args.cols), dtype=float)
 
     mouse_down = False
     mouse_button = None
@@ -117,7 +124,7 @@ def main(args):
             for event in pygame.event.get():
                 # Handles when the gui is closed
                 if event.type == pygame.QUIT:
-                    save_and_exit(array, parsed_args)
+                    save_and_exit(array, mask, parsed_args)
                 # Handles when the window is resized
                 elif event.type == pygame.VIDEORESIZE:
                     width, height = event.w, event.h
@@ -128,7 +135,7 @@ def main(args):
                     mouse_button = event.button
 
                     x, y = calc_position(array, width, height, x_offset, y_offset)
-                    array = update_pixel(x, y, array, mouse_button)
+                    array, mask = update_pixel(x, y, array, mask, mouse_button)
                 # Handles when the mouse button is released
                 elif event.type == pygame.MOUSEBUTTONUP:
                     mouse_down = False
@@ -137,7 +144,7 @@ def main(args):
                 if event.type == pygame.MOUSEMOTION and mouse_down:
                     x, y = calc_position(array, width, height, x_offset, y_offset)
                     if x != last_x or y != last_y:
-                        array = update_pixel(x, y, array, mouse_button)
+                        array, mask = update_pixel(x, y, array, mask, mouse_button)
                         last_x, last_y = x, y
 
             x_offset, y_offset, plot_width, plot_height = render(array, screen, width, height)

@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from enum import Enum
 
 
 def makedirs(file):
@@ -14,48 +15,43 @@ def makedirs(file):
 
 
 def create_uniform_random_array(rows, cols):
-    return np.random.uniform(low=0, high=1, size=(rows, cols))
+    arr = np.random.uniform(low=0, high=1, size=(rows, cols), dtype=float)
+    return arr, np.copy(arr)
 
 def create_test_array(rows, cols):
-    arr = np.zeros((rows, cols))
+    arr = np.zeros((rows, cols), dtype=float)
+
     arr[:, 0] = 1
     arr[:, -1] = 1
 
-    return arr
+    return arr, np.copy(arr)
 
-def create_outline_array(rows, cols, thickness=1, input_array=None):
-    if input_array is None:
-        arr = np.zeros((rows, cols))
-    else:
-        arr = input_array
+class ArrayType(Enum):
+    OUTLINE = 'outline'
+    CENTER = 'center'
+    PLUS = 'plus'
 
-    arr[0:thickness, :] = 1
-    arr[-thickness:, :] = 1
-    arr[:, 0:thickness] = 1
-    arr[:, -thickness:] = 1
+def update_array(array, rows, cols, array_type, thickness):
+    match array_type:
+        case ArrayType.OUTLINE:
+            array[0:thickness, :] = 1
+            array[-thickness:, :] = 1
+            array[:, 0:thickness] = 1
+            array[:, -thickness:] = 1
+        case ArrayType.CENTER:
+            array[rows // 2 - thickness:rows // 2 + thickness, cols // 2 - thickness:cols // 2 + thickness] = 1
+        case ArrayType.PLUS:
+            array[rows // 2 - thickness:rows // 2 + thickness, :] = 1
+            array[:, cols // 2 - thickness:cols // 2 + thickness] = 1
 
-    return arr
+def create_array(rows, cols, array_type, thickness=1, input_array=None, input_mask=None):
+    arr = np.zeros((rows, cols), dtype=float) if input_array is None else input_array
+    mask = np.zeros((rows, cols), dtype=float) if input_mask is None else input_mask
 
-def create_plus_array(rows, cols, thickness=1, input_array=None):
-    if input_array is None:
-        arr = np.zeros((rows, cols))
-    else:
-        arr = input_array
+    for array in [arr, mask]:
+        update_array(array, rows, cols, array_type, thickness)
 
-    arr[rows // 2 - thickness:rows // 2 + thickness, :] = 1
-    arr[:, cols // 2 - thickness:cols // 2 + thickness] = 1
-
-    return arr
-
-def create_center_array(rows, cols, thickness=1, input_array=None):
-    if input_array is None:
-        arr = np.zeros((rows, cols))
-    else:
-        arr = input_array
-
-    arr[rows // 2 - thickness:rows // 2 + thickness, cols // 2 - thickness:cols // 2 + thickness] = 1
-
-    return arr
+    return arr, mask
 
 def print_array(arr):
     df = pd.DataFrame(arr)
@@ -77,28 +73,30 @@ def avg_diff(arr1, arr2):
     diff = np.abs(arr1 - arr2)
     return np.average(diff)
 
-def apply_stencil(arr, iterations, save_history=True, max_diff_threshold=1e-10, avg_diff_threshold=1e-10):
+def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=1e-10, avg_diff_threshold=1e-10):
     plate_history = np.copy(arr)
     new_array = np.copy(arr)
 
-    max_diffs = np.empty(iterations)
+    max_diffs = np.empty(iterations, dtype=float)
     max_diffs.fill(np.nan)
-    avg_diffs = np.empty(iterations)
+    avg_diffs = np.empty(iterations, dtype=float)
     avg_diffs.fill(np.nan)
     for f in range(iterations):
-        for i in range(1, len(arr) - 1):
-            for j in range(1, len(arr[i]) - 1):
-                new_array[i][j] = (
-                    arr[i - 1][j - 1]
-                    + arr[i - 1][j]
-                    + arr[i - 1][j + 1]
-                    + arr[i][j + 1]
-                    + arr[i + 1][j + 1]
-                    + arr[i + 1][j]
-                    + arr[i + 1][j - 1]
-                    + arr[i][j - 1]
-                    + arr[i][j]
-                ) / 9.0
+        for i in range(len(arr)):
+            for j in range(len(arr[i])):
+                if mask[i][j] == 1:
+                    continue
+
+                total = 0
+                count = 0
+
+                for x in range(i - 1, i + 2):
+                    for y in range(j - 1, j + 2):
+                        if 0 <= x < len(arr) and 0 <= y < len(arr[i]):
+                            total += arr[x][y]
+                            count += 1
+
+                new_array[i][j] = total / count
 
         arr, new_array = new_array, arr
         if save_history:
@@ -131,11 +129,11 @@ def plot_diffs(max_diffs, max_squared_diffs, output_filename):
 
     plt.figure(figsize=(10, 5))
     plt.plot(max_diffs, label='Max Diff')
-    plt.plot(max_squared_diffs, label='Max Squared Diff')
+    plt.plot(max_squared_diffs, label='Average Diff')
 
     plt.xlabel('Iteration')
     plt.ylabel('Diff')
-    plt.title('Max Diff and Max Squared Diff Over Time')
+    plt.title('Max Diff and Average Diff Over Time')
     plt.legend()
 
     plt.savefig(output_filename)

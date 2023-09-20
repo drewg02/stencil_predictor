@@ -7,6 +7,7 @@ def main(args):
     parser = ut.ArgParser(description='Apply stencil filter to an array.')
     parser.add_argument('num_iterations', type=int, help='Number of iterations for stencil filter')
     parser.add_argument('input_file', type=str, help='Path to the input file')
+    parser.add_argument('input_mask_file', type=str, help='Path to the input mask file')
     parser.add_argument('output_file', type=str, help='Path to the output file')
     parser.add_argument('all_iterations', type=str, help='All iterations parameter', nargs='?') # if left out just don't provide it
 
@@ -15,9 +16,11 @@ def main(args):
     save_history = parsed_args.all_iterations is not None
 
     # Read the array from the input file
-    initial_array = ut.read_array_from_file(parsed_args.input_file)
+    input_array = ut.read_array_from_file(parsed_args.input_file)
+    # Read the array from the input file
+    mask_array = ut.read_array_from_file(parsed_args.input_mask_file)
     # Apply the stencil filter to the array
-    new_array, plate_history, max_diffs, max_squared_diffs = ut.apply_stencil(initial_array, parsed_args.num_iterations, save_history=save_history)
+    new_array, plate_history, max_diffs, max_squared_diffs = ut.apply_stencil(input_array, mask_array, parsed_args.num_iterations, save_history=save_history)
 
     # Save the array to the output files
     ut.save_array_to_file(new_array, parsed_args.output_file)
