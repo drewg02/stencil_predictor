@@ -1,6 +1,6 @@
+import inspect
 import os
 import sys
-import inspect
 
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parent_dir = os.path.dirname(current_dir)
@@ -42,7 +42,8 @@ def main(args):
         parsed_args.cols = len(input_array[0])
 
     # Apply the function to create the new array
-    array, mask = ut.create_array(parsed_args.rows, parsed_args.cols, ut.ArrayType.PLUS, parsed_args.thickness, input_array, input_mask)
+    array, mask = ut.create_array(parsed_args.rows, parsed_args.cols, ut.ArrayType.PLUS, parsed_args.thickness,
+                                  input_array, input_mask)
 
     # Save the outputs
     ut.save_array_to_file(array, parsed_args.output_file)

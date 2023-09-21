@@ -1,6 +1,7 @@
-import torch
-import training_utilities as tut
 import numpy as np
+import torch
+
+import training_utilities as tut
 import utilities as ut
 
 seq_length = 10
@@ -12,7 +13,8 @@ input_file_path = 'output/all/all-101x50x50.npy'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Load all of the data from the input file
-array_data, all_loader, processed_img_area, img_height, img_width = tut.prepare_data_all(input_file_path, batch_size, seq_length)
+array_data, all_loader, processed_img_area, img_height, img_width = tut.prepare_data_all(input_file_path, batch_size,
+                                                                                         seq_length)
 
 # Load the model
 image_predictor = tut.load_model('output/train/model.test').to(device)

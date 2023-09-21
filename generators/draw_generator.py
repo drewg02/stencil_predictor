@@ -1,4 +1,5 @@
 import os
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 
 import sys
@@ -14,6 +15,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import utilities as ut
 
+
 def update_pixel(new_x, new_y, array, mask, mouse_button):
     # Only update the pixel if it is in bounds
     if 0 <= new_x < array.shape[1] and 0 <= new_y < array.shape[0]:
@@ -26,6 +28,7 @@ def update_pixel(new_x, new_y, array, mask, mouse_button):
             mask[new_y, new_x] = 0
 
     return array, mask
+
 
 def render(array, screen, width, height):
     # Create the plot to render
@@ -61,6 +64,7 @@ def render(array, screen, width, height):
 
     return x_offset, y_offset, new_width, new_height
 
+
 # Saves the outputs and exits the program
 def save_and_exit(array, mask, parsed_args):
     pygame.quit()
@@ -72,6 +76,7 @@ def save_and_exit(array, mask, parsed_args):
 
     exit()
 
+
 # Calculates the position of the mouse in the array
 def calc_position(array, width, height, x_offset, y_offset):
     x, y = pygame.mouse.get_pos()
@@ -79,6 +84,7 @@ def calc_position(array, width, height, x_offset, y_offset):
     x, y = int((x - x_offset) / scale_factor), int((y - y_offset) / scale_factor)
 
     return x, y
+
 
 def main(args):
     parser = ut.ArgParser(description='Create a new array using a gui interface.')
@@ -153,6 +159,7 @@ def main(args):
     # Handles when the user presses ctrl+c
     except KeyboardInterrupt:
         save_and_exit(array, parsed_args)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

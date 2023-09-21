@@ -1,11 +1,13 @@
 # Stencil Predictor
 
-This project consists of tools to generate initial conditions for a stencil, run the stencil over a number of iterations, and train a machine learning model to predict the results of the stencil.
+This project consists of tools to generate initial conditions for a stencil, run the stencil over a number of
+iterations, and train a machine learning model to predict the results of the stencil.
 
 ## Generators
 
-The following scripts are used to generate initial conditions for the simulation. 
-You can either provide a number of rows and columns to create a new array, or provide an input file that will be modified, one of these two things is required. 
+The following scripts are used to generate initial conditions for the simulation.
+You can either provide a number of rows and columns to create a new array, or provide an input file that will be
+modified, one of these two things is required.
 The thickness is the thickness of the pattern and defaults to 1.
 The output file will be a numpy array saved as a .npy file in all cases.
 The output png file is optional and will be a visualization of the array saved as a .png file.
@@ -64,7 +66,7 @@ test_generator.py [-h] <rows> <cols> <output_file>
 
 **[stencil2d.py](stencil2d.py)**
 
-- Applies a stenciling algorithm to an array. 
+- Applies a stenciling algorithm to an array.
   It will run for num_iterations and save the final result to output_file.
   If all_iterations is set to a file path, it will save a .npy file containing all iterations of the stencil.
 
@@ -76,21 +78,23 @@ test_generator.py [-h] <rows> <cols> <output_file>
 
 **[train.py](train.py)**
 
-- Used to train a machine learning model. 
-- Uses static variables for configuration. 
-- Involves preparing data, defining the model, training it, and saving relevant data such as dataloaders and the trained model.
+- Used to train a machine learning model.
+- Uses static variables for configuration.
+- Involves preparing data, defining the model, training it, and saving relevant data such as dataloaders and the trained
+  model.
 
 # Inference
 
 **[predict.py](predict.py)**
 
-- Used to predict images with a pre-trained model based on the test_loader saved with the model. 
-- Uses static variables for configuration. 
+- Used to predict images with a pre-trained model based on the test_loader saved with the model.
+- Uses static variables for configuration.
 - Performs predictions and saves the results as images.
 
 **[predict_all.py](predict_all.py)**
 
-- Similar to `predict.py`, but instead of using the test_loader, it takes the entire dataset, including validation and training data, and saves the predictions as a .mp4.
+- Similar to `predict.py`, but instead of using the test_loader, it takes the entire dataset, including validation and
+  training data, and saves the predictions as a .mp4.
 - Uses static variables for configuration.
 
 **[difference2d.py](difference2d.py)**
@@ -131,12 +135,12 @@ usage: movie2d.py [-h] <input_file> <output_file>
 
 **[print_model.py](print_model.py)**
 
-- Loads a trained model and prints it to the console. 
+- Loads a trained model and prints it to the console.
 - Uses static variables for configuration.
 
 **[visualize_model.py](visualize_model.py)**
 
-- Utilizes torchviz/graphviz to generate an image representation of a model and saves it to a file. 
+- Utilizes torchviz/graphviz to generate an image representation of a model and saves it to a file.
 - Uses static variables for configuration.
 
 # Example Usage

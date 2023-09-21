@@ -1,11 +1,11 @@
-import os
-
 import argparse
+import os
+from enum import Enum
+
+import cv2
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt, cm
-from enum import Enum
-import cv2
 
 
 def makedirs(file):
@@ -18,6 +18,7 @@ def create_uniform_random_array(rows, cols):
     arr = np.random.uniform(low=0, high=1, size=(rows, cols), dtype=float)
     return arr, np.copy(arr)
 
+
 def create_test_array(rows, cols):
     arr = np.zeros((rows, cols), dtype=float)
 
@@ -26,10 +27,12 @@ def create_test_array(rows, cols):
 
     return arr, np.copy(arr)
 
+
 class ArrayType(Enum):
     OUTLINE = 'outline'
     CENTER = 'center'
     PLUS = 'plus'
+
 
 def update_array(array, rows, cols, array_type, thickness):
     match array_type:
@@ -44,6 +47,7 @@ def update_array(array, rows, cols, array_type, thickness):
             array[rows // 2 - thickness:rows // 2 + thickness, :] = 1
             array[:, cols // 2 - thickness:cols // 2 + thickness] = 1
 
+
 def create_array(rows, cols, array_type, thickness=1, input_array=None, input_mask=None):
     arr = np.zeros((rows, cols), dtype=float) if input_array is None else input_array
     mask = np.zeros((rows, cols), dtype=float) if input_mask is None else input_mask
@@ -53,25 +57,31 @@ def create_array(rows, cols, array_type, thickness=1, input_array=None, input_ma
 
     return arr, mask
 
+
 def print_array(arr):
     df = pd.DataFrame(arr)
     print(df.to_string(index=None, header=False, float_format="%.10f"))
+
 
 def save_array_to_file(arr, output_file):
     makedirs(output_file)
 
     np.save(output_file, arr, allow_pickle=False)
 
+
 def read_array_from_file(input_file):
     return np.load(input_file, allow_pickle=False)
+
 
 def max_diff(arr1, arr2):
     diff = np.abs(arr1 - arr2)
     return np.max(diff)
 
+
 def avg_diff(arr1, arr2):
     diff = np.abs(arr1 - arr2)
     return np.average(diff)
+
 
 def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=1e-10, avg_diff_threshold=1e-10):
     plate_history = np.copy(arr)
@@ -118,11 +128,11 @@ def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=1
 
         avg_diffs[f] = avg_diff_value
 
-
     if save_history:
         plate_history = np.reshape(plate_history, (-1, arr.shape[0], arr.shape[1]))
 
     return arr, plate_history, max_diffs, avg_diffs
+
 
 def plot_diffs(max_diffs, max_squared_diffs, output_filename):
     makedirs(output_filename)
@@ -138,10 +148,12 @@ def plot_diffs(max_diffs, max_squared_diffs, output_filename):
 
     plt.savefig(output_filename)
 
+
 def save_plate_history_to_file(plate_history, all_iterations):
     makedirs(all_iterations)
 
     np.save(all_iterations, plate_history)
+
 
 def save_array_as_image(arr, output_file, graph_format=False, cmap='coolwarm'):
     makedirs(output_file)
@@ -152,7 +164,8 @@ def save_array_as_image(arr, output_file, graph_format=False, cmap='coolwarm'):
         plt.xticks(np.arange(0, arr.shape[1], 10))
         plt.yticks(np.arange(0, arr.shape[0], 5))
 
-        plt.tick_params(which='both', labelbottom=True, labeltop=True, top=True, labelright=True, right=True, labelsize=10)  # X-axis tick params
+        plt.tick_params(which='both', labelbottom=True, labeltop=True, top=True, labelright=True, right=True,
+                        labelsize=10)  # X-axis tick params
 
         if "." not in output_file:
             output_file = output_file + ".png"
@@ -168,6 +181,7 @@ def save_array_as_image(arr, output_file, graph_format=False, cmap='coolwarm'):
             output_file = output_file + ".png"
         fig.savefig(output_file, dpi=500)
         plt.close(fig)
+
 
 def save_diff_as_image(arr1, arr2, output_file, graph_format=False):
     makedirs(output_file)

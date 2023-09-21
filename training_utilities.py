@@ -67,7 +67,8 @@ def prepare_data_split(path_to_data, size_of_batch, seq_length, train_ratio=0.7,
     assert val_size > seq_length, f"Validation size({val_size}) must be greater than sequence length({seq_length})."
 
     train_loader = _to_loader(array_data[:train_size], size_of_batch, seq_length, img_height, img_width)
-    val_loader = _to_loader(array_data[train_size:train_size + val_size], size_of_batch, seq_length, img_height, img_width)
+    val_loader = _to_loader(array_data[train_size:train_size + val_size], size_of_batch, seq_length, img_height,
+                            img_width)
     test_loader = _to_loader(array_data[train_size + val_size:], size_of_batch, seq_length, img_height, img_width)
 
     return train_loader, val_loader, test_loader, img_area, img_height, img_width
@@ -86,7 +87,8 @@ def prepare_data_split_reverse(path_to_data, size_of_batch, seq_length, train_ra
     assert val_size > seq_length, f"Validation size({val_size}) must be greater than sequence length({seq_length})."
 
     test_loader = _to_loader(array_data[:test_size], size_of_batch, seq_length, img_height, img_width)
-    val_loader = _to_loader(array_data[test_size:test_size + val_size], size_of_batch, seq_length, img_height, img_width)
+    val_loader = _to_loader(array_data[test_size:test_size + val_size], size_of_batch, seq_length, img_height,
+                            img_width)
     train_loader = _to_loader(array_data[test_size + val_size:], size_of_batch, seq_length, img_height, img_width)
 
     return train_loader, val_loader, test_loader, img_area, img_height, img_width
@@ -106,7 +108,8 @@ def prepare_data_split_split(path_to_data, size_of_batch, seq_length, train_rati
 
     test_loader = _to_loader(array_data[:test_size], size_of_batch, seq_length, img_height, img_width)
     val_loader = _to_loader(array_data[test_size + train_size:], size_of_batch, seq_length, img_height, img_width)
-    train_loader = _to_loader(array_data[test_size:test_size + train_size], size_of_batch, seq_length, img_height, img_width)
+    train_loader = _to_loader(array_data[test_size:test_size + train_size], size_of_batch, seq_length, img_height,
+                              img_width)
 
     return train_loader, val_loader, test_loader, img_area, img_height, img_width
 
@@ -152,6 +155,7 @@ def train_model(model_to_train, epoch_count, train_loader, val_loader, computati
 
     return train_losses, val_losses
 
+
 def plot_training_losses(train_losses, val_losses, output_filename):
     ut.makedirs(output_filename)
 
@@ -166,7 +170,7 @@ def plot_training_losses(train_losses, val_losses, output_filename):
             plt.text(i, train, 'X', color='red', fontsize=12, ha='center', va='center')
             intersections += 1
 
-        if intersections >=10:
+        if intersections >= 10:
             break
 
     plt.xlabel('Epoch')
@@ -226,8 +230,8 @@ class IndexedImgPredictor2(nn.Module):
         super(IndexedImgPredictor2, self).__init__()
 
         nh = 16  # number of hidden layers
-        ks = 3         # kernel size
-        ps = (ks-1)//2 # padding size
+        ks = 3  # kernel size
+        ps = (ks - 1) // 2  # padding size
 
         self.channels = channels
         self.img_height = img_height
@@ -332,4 +336,5 @@ def visualize_model(dummy_x, dummy_indexes, model, visualize_file_path):
         file_extension = file_extension[1:]
 
     result = model(dummy_x, dummy_indexes)
-    make_dot(result, params=dict(list(model.named_parameters())), show_attrs=True, show_saved=True).render(file_name, format=file_extension)
+    make_dot(result, params=dict(list(model.named_parameters())), show_attrs=True, show_saved=True).render(file_name,
+                                                                                                           format=file_extension)

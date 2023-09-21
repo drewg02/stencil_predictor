@@ -1,6 +1,7 @@
 import sys
-import utilities as ut
 import time
+
+import utilities as ut
 
 
 def main(args):

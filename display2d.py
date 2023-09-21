@@ -1,6 +1,7 @@
-import sys
-import utilities as ut
 import argparse as ap
+import sys
+
+import utilities as ut
 
 
 def main(args):
@@ -8,7 +9,8 @@ def main(args):
     parser = ut.ArgParser(description='Read and print an array from a file.')
     parser.add_argument('input_file', type=str, help='Path to the input file')
     parser.add_argument('output_file', type=str, help='Path to the output file')
-    parser.add_argument('--graph-format', action=ap.BooleanOptionalAction, help='Make the output display in graph format')
+    parser.add_argument('--graph-format', action=ap.BooleanOptionalAction,
+                        help='Make the output display in graph format')
 
     parsed_args = parser.parse_args(args)
 
