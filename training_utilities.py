@@ -157,27 +157,33 @@ def train_model(model_to_train, epoch_count, train_loader, val_loader, computati
 
 
 def plot_training_losses(train_losses, val_losses, output_filename):
-    ut.makedirs(output_filename)
+    try:
+        plt.figure(figsize=(10, 5))
+        plt.plot(train_losses, label='Train Loss')
+        plt.plot(val_losses, label='Validation Loss')
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(train_losses, label='Train Loss')
-    plt.plot(val_losses, label='Validation Loss')
+        intersections = 0
+        for i, (train, val) in enumerate(zip(train_losses, val_losses)):
+            if train <= val:
+                plt.scatter(i, train, color='red', zorder=5)
+                plt.text(i, train, 'X', color='red', fontsize=12, ha='center', va='center')
+                intersections += 1
 
-    intersections = 0
-    for i, (train, val) in enumerate(zip(train_losses, val_losses)):
-        if train <= val:
-            plt.scatter(i, train, color='red', zorder=5)
-            plt.text(i, train, 'X', color='red', fontsize=12, ha='center', va='center')
-            intersections += 1
+            if intersections >= 10:
+                break
 
-        if intersections >= 10:
-            break
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Train and Validation Loss Over Time')
+        plt.legend()
+        plt.savefig(output_filename)
 
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Train and Validation Loss Over Time')
-    plt.legend()
-    plt.savefig(output_filename)
+        plt.close()
+
+        return True
+    except Exception as e:
+        print(f"Couldn't save the plot: {e}")
+        return False
 
 
 class IndexedImgPredictor(nn.Module):
@@ -310,31 +316,46 @@ def load_dataloader(dataloader_file_path, batch_size):
 
 
 def save_dataloader(dataloader, dataloader_file_path):
-    ut.makedirs(dataloader_file_path)
-
-    torch.save(dataloader.dataset, dataloader_file_path)
+    try:
+        torch.save(dataloader.dataset, dataloader_file_path)
+    except Exception as e:
+        print(f"Couldn't save the dataloader: {e}")
 
 
 def load_model(model_file_path):
-    return torch.load(model_file_path)
+    try:
+        return torch.load(model_file_path)
+    except FileNotFoundError:
+        print("Model file not found.")
+        return None
+    except Exception as e:
+        print(f"Couldn't load the model: {e}")
+        return None
 
 
 def save_model(model, model_file_path):
-    ut.makedirs(model_file_path)
-
-    torch.save(model, model_file_path)
+    try:
+        torch.save(model, model_file_path)
+        return True
+    except Exception as e:
+        print(f"Couldn't save the model: {e}")
+        return False
 
 
 def visualize_model(dummy_x, dummy_indexes, model, visualize_file_path):
-    ut.makedirs(visualize_file_path)
+    try:
+        file_name, file_extension = os.path.splitext(visualize_file_path)
 
-    file_name, file_extension = os.path.splitext(visualize_file_path)
+        if not file_extension:
+            file_extension = 'png'
+        else:
+            file_extension = file_extension[1:]
 
-    if not file_extension:
-        file_extension = 'png'
-    else:
-        file_extension = file_extension[1:]
+        result = model(dummy_x, dummy_indexes)
+        make_dot(result, params=dict(list(model.named_parameters())), show_attrs=True, show_saved=True).render(
+            file_name, format=file_extension)
 
-    result = model(dummy_x, dummy_indexes)
-    make_dot(result, params=dict(list(model.named_parameters())), show_attrs=True, show_saved=True).render(file_name,
-                                                                                                           format=file_extension)
+        return True
+    except Exception as e:
+        print(f"Couldn't visualize the model: {e}")
+        return False

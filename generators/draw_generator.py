@@ -41,10 +41,10 @@ def render(array, screen, width, height):
     fig.canvas.draw()
     w, h = fig.canvas.get_width_height()
     # Convert the plot to a pygame image to be displayed
-    buf = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    buf.shape = (h, w, 3)
+    buf = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)
+    buf.shape = (h, w, 4)
     img = Image.fromarray(buf)
-    img = pygame.image.fromstring(img.tobytes(), img.size, "RGB")
+    img = pygame.image.fromstring(img.tobytes(), img.size, "RGBA")
 
     # Scale the image to fit the screen
     scale_factor = min(width / array.shape[1], height / array.shape[0])

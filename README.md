@@ -16,41 +16,50 @@ The output png file is optional and will be a visualization of the array saved a
 
 - Generates initial conditions with a pattern starting from the center of the array.
 
-```
-center_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [--thickness THICKNESS] [--output_png_file OUTPUT_PNG_FILE] <output_file>
-```
+  ```
+  center_generator.py [-h] [--rows ROWS] [--cols COLS]
+                     [--input_file INPUT_FILE] [--thickness THICKNESS]
+                     [--output_png_file OUTPUT_PNG_FILE]
+                     <output_file>
+  ```
 
 **[outline_generator.py](generators/outline_generator.py)**
 
 - Generates initial conditions with an outline around the edges of the array.
 
-```
-outline_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [--thickness THICKNESS] [--output_png_file OUTPUT_PNG_FILE] <output_file>
-```
+  ```
+    outline_generator.py [-h] [--rows ROWS] [--cols COLS]
+                        [--input_file INPUT_FILE] [--thickness THICKNESS]
+                        [--output_png_file OUTPUT_PNG_FILE]
+                        <output_file>
+  ```
 
 **[plus_generator.py](generators/plus_generator.py)**
 
 - Generates initial conditions with a plus pattern in the center of the array.
 
-```
-plus_generator.py [-h] [--rows ROWS] [--cols COLS] [--input_file INPUT_FILE] [--thickness THICKNESS] [--output_png_file OUTPUT_PNG_FILE] <output_file>
-```
+  ```
+    plus_generator.py [-h] [--rows ROWS] [--cols COLS]
+                     [--input_file INPUT_FILE] [--thickness THICKNESS]
+                     [--output_png_file OUTPUT_PNG_FILE]
+                     <output_file>
+  ```
 
 **[random_generator.py](generators/random_generator.py)**
 
 - Generates initial conditions with random values turned on.
 
-```
-random_generator.py [-h] <rows> <cols> <output_file>
-```
+  ```
+  random_generator.py [-h] <rows> <cols> <output_file>
+  ```
 
 **[test_generator.py](generators/test_generator.py)**
 
 - Generates initial conditions where the leftmost and rightmost columns are turned on and the rest are turned off.
 
-```
-test_generator.py [-h] <rows> <cols> <output_file>
-```
+  ```
+  test_generator.py [-h] <rows> <cols> <output_file>
+  ```
 
 # Utilities
 
@@ -67,12 +76,17 @@ test_generator.py [-h] <rows> <cols> <output_file>
 **[stencil2d.py](stencil2d.py)**
 
 - Applies a stenciling algorithm to an array.
-  It will run for num_iterations and save the final result to output_file.
-  If all_iterations is set to a file path, it will save a .npy file containing all iterations of the stencil.
+- It will run for num_iterations and save the final result to output_file.
+- If all_iterations is set to a file path, it will save a .npy file containing all iterations of the stencil.
 
    ```
-   usage: stencil2d.py [-h] <num_iterations> <input_file> <output_file> [all_iterations]
-   ```
+  usage: stencil2d.py [-h] [--max_diff_threshold MAX_DIFF_THRESHOLD]
+                      [--avg_diff_threshold AVG_DIFF_THRESHOLD]
+                      [--all_iterations ALL_ITERATIONS]
+                      [--difference_graph_file DIFFERENCE_GRAPH_FILE]
+                      <num_iterations> <input_file> <input_mask_file>
+                      <output_file>
+  ```
 
 # Training
 
@@ -101,9 +115,9 @@ test_generator.py [-h] <rows> <cols> <output_file>
 
 - Takes two array files as input and saves the difference between them as an image to disk.
 
-```
-usage: difference2d.py [-h] [--graph-format | --no-graph-format] <input_file_1> <input_file_2> <output_file>
-```
+  ```
+  usage: difference2d.py [-h] [--graph-format | --no-graph-format] <input_file1> <input_file2> <output_file>
+  ```
 
 # Array Visualization
 
@@ -111,25 +125,27 @@ usage: difference2d.py [-h] [--graph-format | --no-graph-format] <input_file_1> 
 
 - Takes in one .npy array and saves it as an image to disk.
 
-```
-usage: display2d.py [-h] [--graph-format | --no-graph-format] <input_file> <output_file>
-```
+  ```
+  usage: display2d.py [-h] [--graph-format | --no-graph-format] <input_file> <output_file>
+  ```
 
 **[print2d.py](print2d.py)**
 
 - Prints a .npy array file to the console.
 
-```
-usage: print2d.py [-h] <input_file>
-```
+  ```
+  usage: print2d.py [-h] <input_file>
+  ```
 
 **[movie2d.py](movie2d.py)**
 
 - Takes a .npy file containing an array of images and converts them into an .mp4 video in the specified order.
+- The file extension of the output file must be provided and must be compatible with the fourcc code provided,
+  use `.mp4` with the default codec.
 
-```
-usage: movie2d.py [-h] <input_file> <output_file>
-```
+  ```
+  usage: movie2d.py [-h] [--dpi DPI] [--fps FPS] [--fourcc FOURCC] <input_file> <output_file>
+  ```
 
 # Model Visualization
 
