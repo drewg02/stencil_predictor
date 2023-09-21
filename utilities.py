@@ -3,9 +3,9 @@ import os
 import argparse
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+from matplotlib import pyplot as plt, cm
 from enum import Enum
+import cv2
 
 
 def makedirs(file):
@@ -175,24 +175,37 @@ def save_diff_as_image(arr1, arr2, output_file, graph_format=False):
     arr = abs(arr1 - arr2)
     save_array_as_image(arr, output_file, graph_format=graph_format, cmap='gray')
 
-def save_array_as_movie(arr, output_file, cmap="coolwarm"):
-    makedirs(output_file)
 
-    dpi = 200
-    fps = 10
+def save_array_as_movie(arr, output_file, cmap="coolwarm", dpi=200, fps=10):
+    height, width = arr.shape[1], arr.shape[2]
+    scale_factor = dpi // 10
 
-    base = plt.figure(figsize=(arr.shape[1] / 10, arr.shape[2] / 10), dpi=dpi)
-    ax = plt.Axes(base, [0, 0, 1, 1])
-    ax.set_axis_off()
-    base.add_axes(ax)
-    base.show()
+    height_scaled, width_scaled = height * scale_factor, width * scale_factor
 
-    def animate(i):
-        if arr.shape[0] < 50 or i % 10 == 0: print(i)
-        return [ax.imshow(arr[i], cmap=cmap, origin='lower')]
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    out = cv2.VideoWriter(output_file, fourcc, fps, (width_scaled, height_scaled), isColor=True)
 
-    im_ani = animation.FuncAnimation(base, animate, frames=arr.shape[0] - 1, interval=1000 / fps, blit=True)
-    im_ani.save(output_file, dpi=dpi)
+    cmap_func = cm.get_cmap(cmap)
+
+    total_frames = arr.shape[0]
+    last_progress = 0
+    for i in range(total_frames):
+        frame = arr[i]
+        normalized_frame = frame / frame.max()
+        rgba_frame = (cmap_func(normalized_frame) * 255).astype(np.uint8)
+        bgr_frame = cv2.cvtColor(rgba_frame, cv2.COLOR_RGBA2BGR)
+
+        bgr_frame_scaled = cv2.resize(bgr_frame, (width_scaled, height_scaled), interpolation=cv2.INTER_NEAREST)
+
+        out.write(bgr_frame_scaled)
+
+        progress = (i / total_frames) * 100
+        if progress - last_progress >= 1:
+            last_progress = progress
+            print(f"{progress:.2f}% done, frame {i} of {total_frames}")
+
+    out.release()
+
 
 class ArgParser(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
