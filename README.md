@@ -116,7 +116,8 @@ The output png file is optional and will be a visualization of the array saved a
 - Takes two array files as input and saves the difference between them as an image to disk.
 
   ```
-  usage: difference2d.py [-h] [--graph-format | --no-graph-format] <input_file1> <input_file2> <output_file>
+  usage: difference2d.py [-h] [--graph-format | --no-graph-format]
+                       <input_file1> <input_file2> <output_file>
   ```
 
 # Array Visualization
@@ -126,7 +127,8 @@ The output png file is optional and will be a visualization of the array saved a
 - Takes in one .npy array and saves it as an image to disk.
 
   ```
-  usage: display2d.py [-h] [--graph-format | --no-graph-format] <input_file> <output_file>
+  usage: display2d.py [-h] [--graph-format | --no-graph-format]
+                    <input_file> <output_file>
   ```
 
 **[print2d.py](print2d.py)**
@@ -144,7 +146,8 @@ The output png file is optional and will be a visualization of the array saved a
   use `.mp4` with the default codec.
 
   ```
-  usage: movie2d.py [-h] [--dpi DPI] [--fps FPS] [--fourcc FOURCC] <input_file> <output_file>
+  usage: movie2d.py [-h] [--dpi DPI] [--fps FPS] [--fourcc FOURCC]
+                  <input_file> <output_file>
   ```
 
 # Model Visualization
