@@ -12,7 +12,7 @@ def main(args):
     parsed_args = parser.parse_args(args)
 
     # Read the array from the input file
-    array_to_display = ut.read_array_from_file(parsed_args.input_file)
+    array_to_display = ut.read_array_from_file(parsed_args.input_file)[0:100]
 
     # Save the array to the output file
     ut.save_array_as_image(array_to_display, parsed_args.output_file)

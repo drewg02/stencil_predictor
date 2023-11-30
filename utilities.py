@@ -5,12 +5,8 @@ from enum import Enum
 import cv2
 import numpy as np
 import pandas as pd
+from PIL import Image
 from matplotlib import pyplot as plt, cm
-
-
-def create_uniform_random_array(rows, cols):
-    arr = np.random.uniform(low=0, high=1, size=(rows, cols), dtype=float)
-    return arr, np.copy(arr)
 
 
 def create_test_array(rows, cols):
@@ -26,36 +22,82 @@ class ArrayType(Enum):
     OUTLINE = 'outline'
     CENTER = 'center'
     PLUS = 'plus'
+    RANDOM = 'random'
+    RANDOM_UNIFORM = 'random_uniform'
 
 
-def update_array(array, rows, cols, array_type, thickness):
+def update_array(array, rows, cols, array_type, thickness=1, chance=0.2):
     match array_type:
         case ArrayType.OUTLINE:
-            array[0:thickness, :] = 1
-            array[-thickness:, :] = 1
-            array[:, 0:thickness] = 1
-            array[:, -thickness:] = 1
+            array[0:thickness, :] = 1.0
+            array[-thickness:, :] = 1.0
+            array[:, 0:thickness] = 1.0
+            array[:, -thickness:] = 1.0
         case ArrayType.CENTER:
-            array[rows // 2 - thickness:rows // 2 + thickness, cols // 2 - thickness:cols // 2 + thickness] = 1
+            array[rows // 2 - thickness:rows // 2 + thickness, cols // 2 - thickness:cols // 2 + thickness] = 1.0
         case ArrayType.PLUS:
-            array[rows // 2 - thickness:rows // 2 + thickness, :] = 1
-            array[:, cols // 2 - thickness:cols // 2 + thickness] = 1
+            array[rows // 2 - thickness:rows // 2 + thickness, :] = 1.0
+            array[:, cols // 2 - thickness:cols // 2 + thickness] = 1.0
+        case ArrayType.RANDOM:
+            array[:] = np.random.choice([0.0, 1.0], size=(rows, cols), p=[1.0 - chance, chance])
+        case ArrayType.RANDOM_UNIFORM:
+            array[:] = np.random.uniform(low=0.0, high=1.0, size=(rows, cols))
         case _:
             raise ValueError(f"Invalid array type: {array_type}")
 
+    return array
 
-def create_array(rows, cols, array_type, thickness=1, input_array=None, input_mask=None):
+
+def create_array(rows, cols, array_type, thickness=1, chance=0.2, input_array=None, input_mask=None, mask_clone=True):
     arr = np.zeros((rows, cols), dtype=float) if input_array is None else input_array
     mask = np.zeros((rows, cols), dtype=float) if input_mask is None else input_mask
 
-    for array in [arr, mask]:
+    try:
+        arr = update_array(arr, rows, cols, array_type, thickness=thickness, chance=chance)
+    except ValueError as e:
+        print(f"Couldn't create the array: {e}")
+        return None, None
+
+    if mask_clone:
+        mask = np.copy(arr)
+    else:
         try:
-            update_array(array, rows, cols, array_type, thickness)
+            mask = update_array(mask, rows, cols, array_type, thickness=thickness, chance=chance)
         except ValueError as e:
-            print(f"Couldn't create the array: {e}")
+            print(f"Couldn't create the mask: {e}")
             return None, None
 
     return arr, mask
+
+
+def create_pairs(rows, cols, num_initials, num_iterations, array_type=ArrayType.RANDOM, thickness=1, chance=0.2, verbose=True):
+    pairs = np.empty((num_initials * num_iterations, 2, rows, cols), dtype=float)
+    last_progress = 0
+
+    total_pairs = num_initials * num_iterations
+
+    start_time = time.time()
+    for i in range(num_initials):
+        total_index = (i + 1) * num_iterations
+
+        # Generate the input and mask arrays
+        input_array, mask_array = create_array(rows, cols, array_type, thickness=thickness, chance=chance)
+
+        # Run the stencil filter on the input array for 1 iteration
+        _, plate_history, _, _ = apply_stencil(input_array, mask_array, num_iterations, verbose=False)
+
+        # Save the input and output arrays to the pairs array
+        for j in range(num_iterations):
+            pairs[i * num_iterations + j][0] = plate_history[j]
+            pairs[i * num_iterations + j][1] = plate_history[j + 1]
+
+        progress = total_index / total_pairs * 100
+        if progress - last_progress >= 1:
+            last_progress = progress
+            elapsed_time = time.time() - start_time
+            if verbose: print(f"{progress:.2f}% done, generated {total_index}/{total_pairs} pairs, {elapsed_time:.2f} seconds elapsed")
+
+    return pairs
 
 
 def print_array(arr):
@@ -92,12 +134,14 @@ def avg_diff(arr1, arr2):
     return np.average(diff)
 
 
-def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=None, avg_diff_threshold=None):
+def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=None, avg_diff_threshold=None, verbose=True):
     start_time = time.time()
 
     plate_history = np.copy(arr)
     new_array = np.copy(arr)
 
+    max_diffs = None
+    avg_diffs = None
     if max_diff_threshold is not None:
         max_diffs = np.empty(iterations, dtype=float)
         max_diffs.fill(np.nan)
@@ -106,8 +150,6 @@ def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=N
         avg_diffs.fill(np.nan)
 
     last_progress = 0
-    total_iterations = iterations
-
     for f in range(iterations):
         for i in range(len(arr)):
             for j in range(len(arr[i])):
@@ -133,7 +175,7 @@ def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=N
             max_diff_value = max_diff(arr, new_array)
             max_diff_delta = np.abs(max_diff_value - max_diffs[f - 1])
             if max_diff_threshold > 0 and max_diff_delta < max_diff_threshold:
-                print(f'Stopped by max diff threshold of {max_diff_threshold} at iteration {f}')
+                if verbose: print(f'Stopped by max diff threshold of {max_diff_threshold} at iteration {f}')
                 break
 
             max_diffs[f] = max_diff_value
@@ -142,17 +184,16 @@ def apply_stencil(arr, mask, iterations, save_history=True, max_diff_threshold=N
             avg_diff_value = avg_diff(arr, new_array)
             avg_diff_delta = np.abs(avg_diff_value - avg_diffs[f - 1])
             if avg_diff_threshold > 0 and avg_diff_delta < avg_diff_threshold:
-                print(f'Stopped by avg diff threshold of {avg_diff_threshold} at iteration {f}')
+                if verbose: print(f'Stopped by avg diff threshold of {avg_diff_threshold} at iteration {f}')
                 break
 
             avg_diffs[f] = avg_diff_value
 
-        progress = (f / total_iterations) * 100
-
+        progress = ((f + 1) / iterations) * 100
         if progress - last_progress >= 1:
             last_progress = progress
             elapsed_time = time.time() - start_time
-            print(f"{progress:.2f}% done, iteration {f} of {total_iterations}, {elapsed_time:.2f} seconds elapsed")
+            if verbose: print(f"{progress:.2f}% done, iteration {f + 1}/{iterations}, {elapsed_time:.2f} seconds elapsed")
 
     if save_history:
         plate_history = np.reshape(plate_history, (-1, arr.shape[0], arr.shape[1]))
@@ -181,17 +222,37 @@ def plot_diffs(max_diffs, max_squared_diffs, output_filename):
         return False
 
 
-def save_array_as_image(arr, output_file, cmap="coolwarm"):
+def save_array_as_image(arr, output_file, cmap="coolwarm", dpi=5000):
     try:
+        # if the shape of array is less than 4, then we need to add dimensions to it until it is 4
+        while len(arr.shape) < 4:
+            arr = np.expand_dims(arr, axis=0)
+
         cmap_func = cm.get_cmap(cmap)
-        normalized_arr = arr / arr.max()
-        rgba_arr = (cmap_func(normalized_arr) * 255).astype(np.uint8)
-        bgr_arr = cv2.cvtColor(rgba_arr, cv2.COLOR_RGBA2BGR)
 
-        if "." not in output_file:
-            output_file = output_file + ".png"
+        groups = []
+        for n in range(arr.shape[0]):
+            group = []
+            for m in range(arr.shape[1]):
+                color_mapped = cmap_func(arr[n][m])
+                img_bgr = (color_mapped * 255).astype(np.uint8)
 
-        cv2.imwrite(output_file, bgr_arr)
+                group.append(img_bgr)
+
+            if len(group) > 1:
+                group = np.vstack(group)
+            else:
+                group = group[0]
+
+            groups.append(group)
+
+        if len(groups) > 1:
+            final_img = np.hstack(groups)
+        else:
+            final_img = groups[0]
+
+        final_img_pil = Image.fromarray(final_img)
+        final_img_pil.save(output_file, dpi=(dpi, dpi))
 
         return True
     except Exception as e:
@@ -257,3 +318,13 @@ class ArgParser(argparse.ArgumentParser):
                 usage = usage.replace(f" {action.dest}", f" <{action.dest}>")
 
         return usage
+
+
+def MASE(target_images, predicted_images):
+    mae = np.mean(np.abs(target_images - predicted_images))
+    scale = np.mean(np.abs(target_images[1:] - target_images[:-1]))
+    return mae / scale
+
+
+def sMAPE(target_images, predicted_images):
+    return 100 * np.mean(2 * np.abs(predicted_images - target_images) / (np.abs(predicted_images) + np.abs(target_images)))

@@ -1,32 +1,19 @@
+import time
 import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset, Subset
+from torch.utils.data import DataLoader, TensorDataset, random_split
 from torchviz import make_dot
 
 import utilities as ut
 
 
-def sequential_split(dataset, lengths):
-    if sum(lengths) == 1:
-        subset_lengths = [int(len(dataset) * x) for x in lengths]
-        remainder = len(dataset) - sum(subset_lengths)
-        for i in range(remainder):
-            idx = i % len(subset_lengths)
-            subset_lengths[idx] += 1
-        lengths = subset_lengths
-
-    if sum(lengths) != len(dataset):
-        raise ValueError("Sum of input lengths must equal the length of the input dataset!")
-
-    offsets = [sum(lengths[:i]) for i in range(len(lengths))]
-    return [Subset(dataset, range(offset, offset + length)) for offset, length in zip(offsets, lengths)]
-
-
-def _to_loader(array_data, size_of_batch, seq_length, img_height, img_width):
+def _to_loader_sequence(array_data, size_of_batch, seq_length, img_height, img_width):
     tensor_data = torch.tensor(array_data, dtype=torch.float32).reshape(-1, 1, img_height, img_width)
     seq_data = []
     target_data = []
@@ -45,17 +32,17 @@ def _to_loader(array_data, size_of_batch, seq_length, img_height, img_width):
     return DataLoader(dataset, batch_size=size_of_batch)
 
 
-def prepare_data_all(path_to_data, size_of_batch, seq_length):
+def prepare_data_all_sequence(path_to_data, size_of_batch, seq_length):
     array_data = ut.read_array_from_file(path_to_data)
     img_height, img_width = array_data.shape[1], array_data.shape[2]
     img_area = img_height * img_width
 
-    all_loader = _to_loader(array_data, size_of_batch, seq_length, img_height, img_width)
+    all_loader = _to_loader_sequence(array_data, size_of_batch, seq_length, img_height, img_width)
 
     return array_data, all_loader, img_area, img_height, img_width
 
 
-def prepare_data_split(path_to_data, size_of_batch, seq_length, train_ratio=0.7, val_ratio=0.15):
+def prepare_data_split_sequence(path_to_data, size_of_batch, seq_length, train_ratio=0.7, val_ratio=0.15):
     array_data = ut.read_array_from_file(path_to_data)
     img_height, img_width = array_data.shape[1], array_data.shape[2]
     img_area = img_height * img_width
@@ -66,55 +53,43 @@ def prepare_data_split(path_to_data, size_of_batch, seq_length, train_ratio=0.7,
 
     assert val_size > seq_length, f"Validation size({val_size}) must be greater than sequence length({seq_length})."
 
-    train_loader = _to_loader(array_data[:train_size], size_of_batch, seq_length, img_height, img_width)
-    val_loader = _to_loader(array_data[train_size:train_size + val_size], size_of_batch, seq_length, img_height,
-                            img_width)
-    test_loader = _to_loader(array_data[train_size + val_size:], size_of_batch, seq_length, img_height, img_width)
+    train_loader = _to_loader_sequence(array_data[:train_size], size_of_batch, seq_length, img_height, img_width)
+    val_loader = _to_loader_sequence(array_data[train_size:train_size + val_size], size_of_batch, seq_length,
+                                     img_height,
+                                     img_width)
+    test_loader = _to_loader_sequence(array_data[train_size + val_size:], size_of_batch, seq_length, img_height,
+                                      img_width)
 
     return train_loader, val_loader, test_loader, img_area, img_height, img_width
 
 
-def prepare_data_split_reverse(path_to_data, size_of_batch, seq_length, train_ratio=0.7, val_ratio=0.15):
+def prepare_data_split_pair(path_to_data, size_of_batch, train_ratio=0.7, val_ratio=0.15):
     array_data = ut.read_array_from_file(path_to_data)
-    img_height, img_width = array_data.shape[1], array_data.shape[2]
-    img_area = img_height * img_width
+    img_height, img_width = array_data.shape[2], array_data.shape[3]
 
-    data_size = len(array_data)
-    train_size = int(data_size * train_ratio)
-    val_size = int(data_size * val_ratio)
-    test_size = data_size - train_size - val_size
+    tensor_data = torch.tensor(array_data, dtype=torch.float32).reshape(-1, 2, img_height, img_width)
+    dataset = TensorDataset(tensor_data)
 
-    assert val_size > seq_length, f"Validation size({val_size}) must be greater than sequence length({seq_length})."
+    train_size = int(train_ratio * len(dataset))
+    val_size = int(val_ratio * len(dataset))
+    test_size = len(dataset) - train_size - val_size
 
-    test_loader = _to_loader(array_data[:test_size], size_of_batch, seq_length, img_height, img_width)
-    val_loader = _to_loader(array_data[test_size:test_size + val_size], size_of_batch, seq_length, img_height,
-                            img_width)
-    train_loader = _to_loader(array_data[test_size + val_size:], size_of_batch, seq_length, img_height, img_width)
+    train_data, val_data, test_data = random_split(dataset, [train_size, val_size, test_size],
+                                                   generator=torch.Generator().manual_seed(42))
 
-    return train_loader, val_loader, test_loader, img_area, img_height, img_width
+    # Convert Subset to tensor
+    train_data = tensor_data[torch.tensor(train_data.indices)]
+    val_data = tensor_data[torch.tensor(val_data.indices)]
+    test_data = tensor_data[torch.tensor(test_data.indices)]
 
+    train_loader = DataLoader(train_data, size_of_batch, shuffle=True)
+    val_loader = DataLoader(val_data, size_of_batch)
+    test_loader = DataLoader(test_data, size_of_batch)
 
-def prepare_data_split_split(path_to_data, size_of_batch, seq_length, train_ratio=0.7, val_ratio=0.15):
-    array_data = ut.read_array_from_file(path_to_data)
-    img_height, img_width = array_data.shape[1], array_data.shape[2]
-    img_area = img_height * img_width
-
-    data_size = len(array_data)
-    train_size = int(data_size * train_ratio)
-    val_size = int(data_size * val_ratio)
-    test_size = data_size - train_size - val_size
-
-    assert val_size > seq_length, f"Validation size({val_size}) must be greater than sequence length({seq_length})."
-
-    test_loader = _to_loader(array_data[:test_size], size_of_batch, seq_length, img_height, img_width)
-    val_loader = _to_loader(array_data[test_size + train_size:], size_of_batch, seq_length, img_height, img_width)
-    train_loader = _to_loader(array_data[test_size:test_size + train_size], size_of_batch, seq_length, img_height,
-                              img_width)
-
-    return train_loader, val_loader, test_loader, img_area, img_height, img_width
+    return train_loader, val_loader, test_loader, img_height, img_width
 
 
-def _process_batch(model, loader, device, loss_function, optimizer=None):
+def _process_batch_sequence(model, loader, device, loss_function, optimizer=None):
     total_loss = 0
     for i, (seq_batch, target_batch, index_batch) in enumerate(loader):
         for j in range(len(seq_batch)):
@@ -134,7 +109,7 @@ def _process_batch(model, loader, device, loss_function, optimizer=None):
     return total_loss / len(loader.dataset)
 
 
-def train_model(model_to_train, epoch_count, train_loader, val_loader, computation_device):
+def train_model_sequence(model_to_train, epoch_count, train_loader, val_loader, computation_device):
     loss_function = nn.MSELoss()
     optimizer = optim.Adam(model_to_train.parameters(), lr=0.001, weight_decay=0.00001)
 
@@ -143,12 +118,12 @@ def train_model(model_to_train, epoch_count, train_loader, val_loader, computati
 
     for epoch in range(epoch_count):
         model_to_train.train()
-        train_loss = _process_batch(model_to_train, train_loader, computation_device, loss_function, optimizer)
+        train_loss = _process_batch_sequence(model_to_train, train_loader, computation_device, loss_function, optimizer)
         train_losses.append(train_loss)
 
         model_to_train.eval()
         with torch.no_grad():
-            val_loss = _process_batch(model_to_train, val_loader, computation_device, loss_function)
+            val_loss = _process_batch_sequence(model_to_train, val_loader, computation_device, loss_function)
         val_losses.append(val_loss)
 
         print(f'Epoch [{epoch + 1}/{epoch_count}] Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}')
@@ -156,25 +131,106 @@ def train_model(model_to_train, epoch_count, train_loader, val_loader, computati
     return train_losses, val_losses
 
 
-def plot_training_losses(train_losses, val_losses, output_filename):
+def _process_batch_pair(model, loader, device, loss_function, optimizer=None):
+    total_loss = 0
+    total_mase = 0
+    total_smape = 0
+
+    for i, batch in enumerate(loader):
+        batch = batch.to(device)
+
+        inputs = batch[:, 0, :, :].to(device)
+        inputs = inputs.reshape(-1, 1, inputs.shape[1], inputs.shape[2])
+        targets = batch[:, 1, :, :].to(device)
+        targets = targets.reshape(-1, 1, targets.shape[1], targets.shape[2])
+
+        predictions = model(inputs)
+
+        loss = loss_function(predictions, targets)
+        mase = MASE(targets, predictions)
+        smape = sMAPE(targets, predictions)
+
+        if optimizer:
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+        total_loss += loss.item()
+        total_mase += mase.item()
+        total_smape += smape.item()
+
+    avg_loss = total_loss / len(loader.dataset)
+    avg_mase = total_mase / len(loader.dataset)
+    avg_smape = total_smape / len(loader.dataset)
+
+    return avg_loss, avg_mase, avg_smape
+
+
+def train_model_pair(model_to_train, epoch_count, train_loader, val_loader, computation_device, lr=1e-3,
+                     weight_decay=1e-3, checkpoint_interval=50, checkpoints_folder_path=None, verbose=True):
+    loss_function = nn.MSELoss()
+    optimizer = optim.AdamW(model_to_train.parameters(), lr=lr, weight_decay=weight_decay)
+
+    train_losses = []
+    train_mase_scores = []
+    train_smape_scores = []
+
+    val_losses = []
+    val_mase_scores = []
+    val_smape_scores = []
+
+    start_time = time.time()
+    for epoch in range(epoch_count):
+        model_to_train.train()
+        train_loss, train_mase, train_smape = _process_batch_pair(model_to_train, train_loader, computation_device,
+                                                                  loss_function, optimizer)
+        train_losses.append(train_loss)
+        train_mase_scores.append(train_mase)
+        train_smape_scores.append(train_smape)
+
+        model_to_train.eval()
+        with torch.no_grad():
+            val_loss, val_mase, val_smape = _process_batch_pair(model_to_train, val_loader, computation_device,
+                                                                loss_function)
+        val_losses.append(val_loss)
+        val_mase_scores.append(val_mase)
+        val_smape_scores.append(val_smape)
+
+        if verbose:
+            elapsed_time = time.time() - start_time
+            print(
+                f"Epoch [{epoch + 1}/{epoch_count}], Train Loss: {train_loss:.4}, Val Loss: {val_loss:.4}, {elapsed_time} seconds elapsed")
+
+        if checkpoints_folder_path is not None and (epoch + 1) % checkpoint_interval == 0:
+            save_model(model_to_train, os.path.join(checkpoints_folder_path,
+                                                    f'checkpoint{int(epoch / checkpoint_interval)}_epoch{epoch + 1}.test'))
+            if verbose:
+                print(f"Checkpoint {int(epoch / checkpoint_interval)} saved at epoch {epoch + 1}")
+
+    return train_losses, train_mase_scores, train_smape_scores, val_losses, val_mase_scores, val_smape_scores
+
+
+def plot_metrics(train_metrics, val_metrics, metric_name, output_filename, plot_intersections=10):
     try:
         plt.figure(figsize=(10, 5))
-        plt.plot(train_losses, label='Train Loss')
-        plt.plot(val_losses, label='Validation Loss')
+        plt.plot(train_metrics, label=f'Train {metric_name}')
+        plt.plot(val_metrics, label=f'Validation {metric_name}')
 
-        intersections = 0
-        for i, (train, val) in enumerate(zip(train_losses, val_losses)):
-            if train <= val:
-                plt.scatter(i, train, color='red', zorder=5)
-                plt.text(i, train, 'X', color='red', fontsize=12, ha='center', va='center')
-                intersections += 1
+        if plot_intersections is not None and plot_intersections > 0:
+            intersections = 0
+            for i in range(1, len(train_metrics)):
+                if (train_metrics[i] <= val_metrics[i] and train_metrics[i - 1] >= val_metrics[i - 1]) or \
+                        (train_metrics[i] >= val_metrics[i] and train_metrics[i - 1] <= val_metrics[i - 1]):
+                    plt.scatter(i, train_metrics[i], color='red', zorder=5)
+                    plt.text(i, train_metrics[i], 'X', color='red', fontsize=12, ha='center', va='center')
+                    intersections += 1
 
-            if intersections >= 10:
-                break
+                if intersections >= plot_intersections:
+                    break
 
         plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Train and Validation Loss Over Time')
+        plt.ylabel(metric_name)
+        plt.title(f'Train and Validation {metric_name} Over Time')
         plt.legend()
         plt.savefig(output_filename)
 
@@ -293,7 +349,70 @@ class IndexedImgPredictor2(nn.Module):
         return x.reshape(self.channels, self.img_height, self.img_width)
 
 
-def predict(loader, model, device):
+class PairImagePredictor(nn.Module):
+    def __init__(self, n_hidden, channels, img_height, img_width):
+        super(PairImagePredictor, self).__init__()
+
+        nh = n_hidden
+        ks = 3
+        ps = ks
+
+        self.channels = channels
+        self.img_height = img_height
+        self.img_width = img_width
+
+        self.pool0 = nn.AvgPool2d(kernel_size=2)
+
+        self.conv1 = nn.Conv2d(self.channels, nh, ks, padding=ps)
+        self.bn1 = nn.BatchNorm2d(nh)
+
+        self.conv1_1 = nn.Conv2d(nh, nh, ks, padding=ps)
+        self.bn1_1 = nn.BatchNorm2d(nh)
+
+        self.pool1 = nn.MaxPool2d(kernel_size=2)
+
+        self.conv2 = nn.Conv2d(nh, nh * 2, ks, padding=(ps - 1))
+        self.bn2 = nn.BatchNorm2d(nh * 2)
+
+        self.conv3 = nn.Conv2d(nh * 2, nh * 2, ks, padding=(ps - 1))
+        self.bn3 = nn.BatchNorm2d(nh * 2)
+
+        self.dropout = nn.Dropout(0.5)
+
+        self.conv4 = nn.Conv2d(nh * 2, channels, ks, padding=(ps - 2))
+
+    def forward(self, x):
+        x = x.reshape(-1, self.channels, self.img_height, self.img_width)
+        # print(f"After reshape: {x.shape}")
+
+        x = self.pool0(x)
+        #  print(f"After pool0: {x.shape}")
+
+        x = F.relu(self.bn1(self.conv1(x)))
+        # print(f"After conv1: {x.shape}")
+
+        x = F.relu(self.bn1_1(self.conv1_1(x)))
+        # print(f"After conv1_1: {x.shape}")
+
+        x = self.pool1(x)
+        # print(f"After pool1: {x.shape}")
+
+        x = F.relu(self.bn2(self.conv2(x)))
+        # print(f"After conv2: {x.shape}")
+
+        x = F.relu(self.bn3(self.conv3(x)))
+        # print(f"After conv3: {x.shape}")
+
+        x = self.dropout(x)
+        # print(f"After dropout: {x.shape}")
+
+        x = self.conv4(x)
+        # print(f"After conv4: {x.shape}")
+
+        return x.reshape(-1, self.channels, self.img_height, self.img_width)
+
+
+def predict_sequence(loader, model, device):
     model.eval()
 
     predicted_images = []
@@ -308,6 +427,24 @@ def predict(loader, model, device):
             predicted_images.append(predicted_image)
 
     return predicted_images
+
+
+def predict_pair(loader, model, device):
+    model.eval()
+
+    predicted_images = []
+    for i, batch in enumerate(loader):
+        batch = batch.to(device)
+
+        inputs = batch[:, 0, :, :].to(device)
+        inputs = inputs.reshape(-1, 1, inputs.shape[1], inputs.shape[2])
+
+        predictions = model(inputs)
+
+        predicted_image = predictions.detach().cpu().numpy()
+        predicted_images.append(predicted_image)
+
+    return np.concatenate(predicted_images)
 
 
 def load_dataloader(dataloader_file_path, batch_size):
@@ -359,3 +496,13 @@ def visualize_model(dummy_x, dummy_indexes, model, visualize_file_path):
     except Exception as e:
         print(f"Couldn't visualize the model: {e}")
         return False
+
+
+def MASE(y_true, y_pred):
+    mae = torch.mean(torch.abs(y_true - y_pred))
+    scale = torch.mean(torch.abs(y_true[:, 1:] - y_true[:, :-1]))
+    return mae / scale
+
+
+def sMAPE(y_true, y_pred):
+    return torch.mean(2 * torch.abs(y_pred - y_true) / (torch.abs(y_pred) + torch.abs(y_true))) * 100

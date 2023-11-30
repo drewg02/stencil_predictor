@@ -7,7 +7,7 @@ img_width = 50
 visualize_file_path = "./output/visualize/visualize_model.png"
 
 # Load the model
-image_predictor = tut.load_model('output/train/model.test')
+image_predictor = tut.load_model('output/unknown_1/train/model.test')
 
 # Print the model directly to the console
 print(image_predictor)

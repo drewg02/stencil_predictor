@@ -16,11 +16,13 @@ def main(args):
     parser.add_argument('cols', type=int, help='Number of columns for the array')
     parser.add_argument('output_file', type=str, help='Path to the output file')
     parser.add_argument('output_mask_file', type=str, help='Path to the output mask file')
+    parser.add_argument('--chance', type=float, help='Chance of a pixel being on, only for non-uniform', default=0.2)
+    parser.add_argument('--uniform', type=bool, help='Whether to use a uniform distribution', default=False)
 
     parsed_args = parser.parse_args(args)
 
     # Apply the function to create the new array
-    array, mask = ut.create_uniform_random_array(parsed_args.rows, parsed_args.cols)
+    array, mask = ut.create_array(parsed_args.rows, parsed_args.cols, ut.ArrayType.RANDOM_UNIFORM if parsed_args.uniform else ut.ArrayType.RANDOM, chance=parsed_args.chance)
 
     # Save the output
     ut.save_array_to_file(array, parsed_args.output_file)
